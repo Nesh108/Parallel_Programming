@@ -1,10 +1,10 @@
-CFLAGS += -Wall
-LDFLAGS += -lrt -lOpenCL
+EXECS=hello_world
+MPICC?=mpicc
 
-hello_world:
+all:	${EXECS}
 
-.PHONY: clean
+hello_world: hello_world.c
+	${MPICC} -o hello_world hello_world.c
+
 clean:
-	rm -f hello_world
-
-
+	rm ${EXECS}
