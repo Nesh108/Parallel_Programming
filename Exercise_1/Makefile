@@ -3,8 +3,8 @@ MPICC?=mpicc
 
 all:	${EXECS}
 
-hello_world: hello_world.c
-	${MPICC} -o hello_world hello_world.c
+hello_world: ${EXECS}.c
+	${MPICC} -o ${EXECS} ${EXECS}.c
 
 clean:
 	rm ${EXECS}
