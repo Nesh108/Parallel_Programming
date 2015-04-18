@@ -8,3 +8,5 @@ mpi_bcast_timer: ${EXECS}.c
 
 clean:
 	rm ${EXECS}
+test: ${EXECS}
+	mpirun -n 16 ${EXECS} "hello there"
