@@ -28,14 +28,12 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Missing argument!\n");
 			return 1;
 		}
-
-		if(world_size < 2) {
-			fprintf(stderr, "World size must be greater than 1 for %s\n", argv[0]);
-			MPI_Abort(MPI_COMM_WORLD, 1);	
-		}
 	}
 
-		
+	if(world_size < 2) {
+		fprintf(stderr, "World size must be greater than 1 for %s\n", argv[0]);
+		MPI_Abort(MPI_COMM_WORLD, 1);	
+	}	
 
 	MPI_Bcast(&console_input, strlen(console_input), MPI_BYTE, root, 
 		MPI_COMM_WORLD);
