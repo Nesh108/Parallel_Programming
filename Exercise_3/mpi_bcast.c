@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
 		
 
-	MPI_Bcast(&console_input, strlen(console_input), MPI_BYTE, root, 
+	MPI_Bcast(&console_input, MAX_BUFFER_SIZE, MPI_BYTE, root, 
 		MPI_COMM_WORLD);
 
 		
