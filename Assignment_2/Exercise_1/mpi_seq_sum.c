@@ -6,7 +6,13 @@
 
 #define MAX_BUFFER_SIZE 500
 
-void para_range(const int n1, const int n2, const int nprocs, const int irank, int * __restrict__ ista, int * __restrict__ iend);
+typedef int bool;
+#define true 1
+#define false 0
+
+void para_range(const int n1, const int n2, const int nprocs, const int irank, int * __restrict__ ista, int * __restrict__ 
+iend);
+int get_sum(int v1, int v2);
 inline int min(const int a, const int b);
 
 int main(int argc, char **argv)
@@ -26,52 +32,67 @@ int main(int argc, char **argv)
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
 	// Sequential Sum
-	int N = 10;
+	const int N = 10;
 	int a[10] = {-1, 5, -2, 0, 1, 4, 6, -4, 3, -6};
 	int sum = 0;
 	int max_sum = 0;
-	int partial_sum = 0;
+
+	const int SIZE_PARTIAL = 2;
+	int local_sum[2] = {0,0};
+	int partial_sums[2] = {0,0};
 	int startval, endval;
 
 	// Calculating sum range for each process
-	para_range(0, 9, world_size, my_rank, &startval, &endval);
+	para_range(0, N-1, world_size, my_rank, &startval, &endval);
 
-	printf("Process %d has sum from %d to %d\n", my_rank, startval, endval);
+	printf("Process %d has to sum from %d to %d\n", my_rank, startval, endval);
 	
 	int i;
+	int head_neg = true;	// variable for looking for negative heading values
+
+	
 	for(i = startval; i <= endval; i++)
 	{
-		// Filters negative sums on ROOT
-		if(my_rank == ROOT && (sum+a[i]) < 0)
-			sum = 0;			
+		if(my_rank != ROOT){
+			if(a[i] < 0 && head_neg)
+				local_sum[0] += a[i];		// Add to negative part of the sum
+			else if(a[i] > 0 && head_neg)
+			{
+				head_neg = false;
+				local_sum[1] += a[i];
+			}
+			else
+				local_sum[1] += a[i];
+		}
 		else
-			sum += a[i];
-		
-	}
+			{
+				sum = get_sum(sum, a[i]);
 
-	printf("Process %d has local sum %d\n", my_rank, sum);
+				if(sum > max_sum)
+					max_sum = sum;
+			}		
+	}
 	
 	// If not the main processor, send the local sum to ROOT
 	if(my_rank != ROOT)
-		MPI_Send(&sum, sizeof(MPI_INT), MPI_INT, 0, 0, MPI_COMM_WORLD);
+		{
+			printf("Process %d has local negative sum %d and local positive sum %d.\n", my_rank, local_sum[0], 
+local_sum[1]);
+			MPI_Send(&local_sum, SIZE_PARTIAL, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
+		}	
 	else{
 		
-		// Sets current sum to maximum sum
-		max_sum = sum;
-
 		int j;
 		for(j = 1; j < world_size; j++)
 		{
-			MPI_Recv(&partial_sum, sizeof(MPI_INT), MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			sum += partial_sum;
+			MPI_Recv(&partial_sums, SIZE_PARTIAL, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			
+			sum = get_sum(sum , partial_sums[0]);
+			sum = get_sum(sum , partial_sums[1]);
 
-			// Filters negative sums
-			if(sum < 0)
-				sum = 0;
-
-			// Checks if current sum is the maximum sum so far
-			if(sum > max_sum)
+			if (sum > max_sum)
 				max_sum = sum;
+
 		}
 
 		printf("The sum is %d and the maximum sum is %d.\n", sum, max_sum);
@@ -83,9 +104,17 @@ int main(int argc, char **argv)
 	MPI_Finalize();
 
 }
+
+int get_sum(int v1, int v2){
+
+	v1 += v2;
+
+	return (v1 < 0)?(0):(v1);
+}
 // Credit to ArthurChamz - 
 // http://stackoverflow.com/questions/26684480/mpi-allreduce-not-working-as-expected-red-black-sor
-void para_range(const int n1, const int n2, const int nprocs, const int irank, int * __restrict__ ista, int * __restrict__ iend)
+void para_range(const int n1, const int n2, const int nprocs, const int irank, int * __restrict__ ista, int * __restrict__ 
+iend)
 {
     const int iwork = ((n2 - n1) / nprocs) + 1;
 
@@ -102,5 +131,6 @@ inline int min(const int a, const int b)
 
     return a;
 }
+
 
 
