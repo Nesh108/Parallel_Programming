@@ -37,9 +37,9 @@ int main(int argc, char **argv)
 	int sum = 0;
 	int max_sum = 0;
 
-	const int SIZE_PARTIAL = 2;
-	int local_sum[2] = {0,0};
-	int partial_sums[2] = {0,0};
+	const int SIZE_PARTIAL = 3;
+	int local_sum[3] = {0,0,0};	// {head_neg, local_sum, local_max}
+	int partial_sums[3] = {0,0,0};
 	int startval, endval;
 
 	// Calculating sum range for each process
@@ -63,6 +63,9 @@ int main(int argc, char **argv)
 			}
 			else
 				local_sum[1] += a[i];
+
+			if(local_sum[1] > local_sum[2])
+				local_sum[2] = local_sum[1];
 		}
 		else
 			{
@@ -76,8 +79,8 @@ int main(int argc, char **argv)
 	// If not the main processor, send the local sum to ROOT
 	if(my_rank != ROOT)
 		{
-			printf("Process %d has local negative sum %d and local positive sum %d.\n", my_rank, local_sum[0], 
-local_sum[1]);
+			printf("Process %d has local negative sum %d, local positive sum %d and local MAX %d.\n", my_rank, local_sum[0], 
+local_sum[1], local_sum[2]);
 			MPI_Send(&local_sum, SIZE_PARTIAL, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
 		}	
 	else{
@@ -86,7 +89,9 @@ local_sum[1]);
 		for(j = 1; j < world_size; j++)
 		{
 			MPI_Recv(&partial_sums, SIZE_PARTIAL, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			
+			if(max_sum < partial_sums[2])
+				max_sum =  partial_sums[2];
+
 			sum = get_sum(sum , partial_sums[0]);
 			sum = get_sum(sum , partial_sums[1]);
 
@@ -94,6 +99,7 @@ local_sum[1]);
 				max_sum = sum;
 
 		}
+
 
 		printf("The sum is %d and the maximum sum is %d.\n", sum, max_sum);
 
